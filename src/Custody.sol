@@ -6,6 +6,8 @@ import {IAdjudicator} from "./interfaces/IAdjudicator.sol";
 import "./interfaces/Types.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import {Test, Vm, console} from "lib/forge-std/src/Test.sol";
+
 /**
  * @title Custody
  * @notice Implementation of IChannel for managing state channels
@@ -56,6 +58,10 @@ contract Custody is IChannel {
         // Validate participants array length
         if (ch.participants.length != 2) {
             revert InvalidParticipants();
+        }
+
+        if (msg.sender != ch.participants[0] && msg.sender != ch.participants[1]) {
+            revert InvalidCaller();
         }
 
         // Calculate channel identifier
@@ -219,17 +225,25 @@ contract Custody is IChannel {
      * @param participants Array of participant addresses
      */
     function _distributeAssets(Asset[] memory outcome, address[] memory participants) private {
+        console.log("yo");
         // Ensure we have outcomes for both participants
         require(outcome.length == 2, "Invalid outcome length");
+        console.log("yo2");
+
 
         // Distribute to Host (participant[0])
         if (outcome[0].amount > 0) {
+            console.log(outcome[0].token, participants[0], outcome[0].amount);
+
             bool success = IERC20(outcome[0].token).transfer(participants[0], outcome[0].amount);
 
             if (!success) {
                 revert TransferFailed();
             }
         }
+
+        console.log("yo3");
+
 
         // Distribute to Guest (participant[1])
         if (outcome[1].amount > 0) {
@@ -239,6 +253,9 @@ contract Custody is IChannel {
                 revert TransferFailed();
             }
         }
+
+        console.log("yo4");
+
     }
 
     /**
@@ -253,9 +270,11 @@ contract Custody is IChannel {
         pure
         returns (bool valid)
     {
+
         // Recover signer from signature
         address recovered = ecrecover(hash, signature.v, signature.r, signature.s);
 
+        console.log("verify", signer, recovered);
         // Check if recovered address matches expected signer
         return recovered == signer;
     }
